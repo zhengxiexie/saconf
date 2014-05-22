@@ -1,0 +1,190 @@
+<config>
+	<!--信令转换、校验、分发、过滤、合并配置文件，所有标签中的available为该标签对应功能的标签，设定为false便屏蔽该功能-->
+	<field_name num="5">imsi,event_type,time_stamp,end_lac,end_ci</field_name>
+	<transform available="true">
+		<!--信令转换配置,每一接口对应一个port节点，prefix为接口文件前缀-->
+		<port type="cs" prefix="A94009CS" available="true">
+			<file_name timestamp_begin="8" timestamp_len="12" file_num_begin="20" file_num_len="2"></file_name>
+			<format num="5" origin_num="21" available="true">2,4,21,8,9</format>
+			<!--format用于配置字段顺序转换 num属性表示输出字段数量，节点内容为转换后字段顺序，由1开始，以半角逗号隔开，若字段数量少于转换前，
+			多余字段将会被抛弃-->
+			<event index="4" type_num="20" available="true">
+				<!--event用于事件类型转换，index配置事件类型于原字符串中位置位置，由1开始，type_num为所要转换的事件类型总数-->
+				<!--事件类型转换映射，以逗号隔开，逗号前为原事件类型编号，逗号后为转换后事件类型编号-->
+				<event_type>8,302</event_type>
+				<event_type>9,302</event_type>
+				<event_type>4,302</event_type>
+				<event_type>16,302</event_type>
+				<event_type>5,501</event_type>
+				<event_type>18,501</event_type>
+				<event_type>6,502</event_type>
+				<event_type>17,502</event_type>
+				<event_type>7,402</event_type>
+				<event_type>19,402</event_type>
+				<event_type>10,101</event_type>
+				<event_type>12,101</event_type>
+				<event_type>0,101</event_type>
+				<event_type>11,102</event_type>
+				<event_type>13,102</event_type>
+				<event_type>1,102</event_type>
+				<event_type>2,201</event_type>
+				<event_type>14,201</event_type>
+				<event_type>3,202</event_type>
+				<event_type>15,202</event_type>
+			</event>
+			<field_spliter>,</field_spliter>
+		</port>
+		<port type="ps" prefix="A94009PS" available="true">
+			<file_name timestamp_begin="8" timestamp_len="12" file_num_begin="20" file_num_len="2"></file_name>
+			<!--format为0的域忽略格式校验，避免简单的重复无法找到对应校验问题，在处理中用该域值用""代替-->
+			<format num="5" origin_num="12" available="true">2,3,1,5,6</format>
+			<event index="3" type_num="6" available="true">
+				<event_type>0,701</event_type>
+				<event_type>1,702</event_type>
+				<event_type>2,801</event_type>
+				<event_type>3,802</event_type>
+				<event_type>4,803</event_type>
+				<event_type>255,999</event_type>
+			</event>
+			<swap_on_event event="702", col="7,8"></swap_on_event>
+			<field_spliter>,</field_spliter>
+		</port>
+	</transform>
+	<general_filter>
+		<filter available="true" field="imsi" update="monthly" date="2" hour="6" min="30">imsi_filter.txt</filter>
+	</general_filter>
+	<!-- check 字段需与field_name对应 -->
+	<check>
+		<column index="1" data_type="char" length="15" can_be_null="false" numeral="true"></column>
+		<column index="2" data_type="int" min_value="-1" max_value="65535" can_be_null="false"></column>
+		<column index="3" data_type="date" min_time="2011-01-01 00:00:01" max_time="2020-12-31 00:00:00" time_before="60" time_delay="0">%Y-%m-%d %H:%M:%S</column>
+		<column index="4" data_type="int" min_value="1" max_value="65534" can_be_null="false"></column>
+		<column index="5" data_type="int" min_value="1" max_value="65534" can_be_null="false"></column>
+	</check>
+	<!--reject or accept-->
+	<illegal_filename action="reject"></illegal_filename>
+    <ignore_file_not_found>true</ignore_file_not_found>
+	<picks default_filtered="true">
+		<pick available="true">
+			<file_filter_rules>
+				<file_filter_rule>
+					<file_prefix>A94009CS</file_prefix>
+					<time_pos>8</time_pos>
+					<time_start>0000</time_start>
+					<time_stop>2400</time_stop>
+				</file_filter_rule>
+
+				<file_filter_rule>
+					<file_prefix>A94009PS</file_prefix>
+					<time_pos>8</time_pos>
+					<time_start>0000</time_start>
+					<time_stop>2400</time_stop>
+				</file_filter_rule>
+			</file_filter_rules>
+			<filters>
+				<filter field="imsi" available="true" match="prefix" value="csv">460</filter>
+				<filter field="event_type" available="true" match="word" value="csv">101,102,201,202,302,303,401,501,502,701,702</filter>
+			</filters>
+			<remove_prefix available="false" prefix="86,086" field="msisdn,other_party" type="recursive"></remove_prefix>
+			<file_timestamp_order_filter available="false">
+				<max_delay>2</max_delay>
+			</file_timestamp_order_filter>
+			<append></append>
+			<merge available="true"  output_path="../../data/pre/area" tmp_path="" output_prefix="pick">
+				<output_format num="8">1,2,3,4,5</output_format>
+				<period>1</period>
+			</merge>
+		</pick>
+		<pick available="true">
+			<file_filter_rules>
+				<file_filter_rule>
+					<file_prefix>A94009CS</file_prefix>
+					<time_pos>8</time_pos>
+					<time_start>0000</time_start>
+					<time_stop>2400</time_stop>
+				</file_filter_rule>
+
+				<file_filter_rule>
+					<file_prefix>A94009PS</file_prefix>
+					<time_pos>8</time_pos>
+					<time_start>0000</time_start>
+					<time_stop>2400</time_stop>
+				</file_filter_rule>
+			</file_filter_rules>
+			<filters>
+				<filter field="imsi" available="true" match="prefix" value="csv">460</filter>
+				<filter field="event_type" available="true" match="word" value="csv">101,102,201,202,302,303,401,501,502,701,702</filter>
+			</filters>
+			<remove_prefix available="false" prefix="86,+86,0086" field="msisdn,other_party" type="recursive"></remove_prefix>
+			<file_timestamp_order_filter available="false">
+				<max_delay>2</max_delay>
+			</file_timestamp_order_filter>
+			<append></append>
+			<merge available="true"  output_path="../../data/pre/cell" tmp_path="" output_prefix="pick">
+				<output_format num="8">1,2,3,4,5</output_format>
+				<period>1</period>
+			</merge>
+		</pick>
+		<pick available="true">
+			<file_filter_rules>
+				<file_filter_rule>
+					<file_prefix>A94009CS</file_prefix>
+					<time_pos>8</time_pos>
+					<time_start>0000</time_start>
+					<time_stop>2400</time_stop>
+				</file_filter_rule>
+
+				<file_filter_rule>
+					<file_prefix>A94009PS</file_prefix>
+					<time_pos>8</time_pos>
+					<time_start>0000</time_start>
+					<time_stop>2400</time_stop>
+				</file_filter_rule>
+			</file_filter_rules>
+			<filters>
+				<filter field="imsi" available="true" match="prefix" value="csv">460</filter>
+				<filter field="event_type" available="true" match="word" value="csv">101,102,201,202,302,303,401,501,502,701,702</filter>
+			</filters>
+			<remove_prefix available="false" prefix="86,+86,0086" field="msisdn,other_party" type="recursive"></remove_prefix>
+			<file_timestamp_order_filter available="false">
+				<max_delay>2</max_delay>
+			</file_timestamp_order_filter>
+			<append></append>
+			<merge available="true"  output_path="../../data/pre/time" tmp_path="" output_prefix="pick">
+				<output_format num="4">1,2,3</output_format>
+				<period>1</period>
+			</merge>
+		</pick>
+	</picks>
+	<!--未通过文件名分拣的文件存放目录-->
+	<path_deserted_file>../../data/deserted</path_deserted_file>
+	<!--指定无输入将缓冲输出的超时时间，单位分钟-->
+	<dump_to_file_when_idle available="true">
+		<timeout>1</timeout>
+	</dump_to_file_when_idle>
+	<input>
+		<input_file_path>../../data/ftp</input_file_path>
+		<sleep_interval>5</sleep_interval>
+	</input>
+	<!--读取msisdn前缀表设置-->
+	<local_msisdn available="false">
+		<!--脚本名-->
+		<script_file>sm_dumptable.sh</script_file>
+		<path>.</path><!--NO TIALING /-->
+		<datafile>dim_msisdn_prefix.dat</datafile>
+		<update>06:30</update>
+	</local_msisdn>
+	<log>
+		<pros_file_path>../../moni/pros/tmp/</pros_file_path>
+		<del_file_path>../../moni/del/</del_file_path>
+		<err_file_path>../../moni/err/</err_file_path>
+		<avl_file_path>../../moni/avl/saPretreatment</avl_file_path>
+		<log_interval>180</log_interval>
+		<lls_log_interval>180</lls_log_interval>
+	</log>
+	<host>
+		<host_code>10101</host_code>
+		<entity_type_code>P02</entity_type_code>
+		<entity_sub_code>0005</entity_sub_code>
+	</host>
+</config>
